@@ -1,0 +1,11 @@
+name: salamina
+channels:
+  - defaults
+dependencies:
+  - python=3.7
+  - pip
+  - pip:
+    - tensorflow==2.4.1
+    - numpy==1.20.2
+    - pandas==1.2.4
+    - mlflow>=1.0
