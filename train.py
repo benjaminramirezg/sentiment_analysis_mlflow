@@ -9,6 +9,11 @@ from tensorflow.keras.layers import Dense, Activation, Dropout
 
 from mlflow import log_metric, log_param, log_artifacts
 
+CONDA_ENV_PATH = './conda.yaml'
+DATASET_PATH = './data/dataset.csv'
+MODEL_PATH = 'model'
+THRESHOLD = 0.5
+
 HYPERPARAMETERS = {
     'NUM_WORDS': 10000,
     'BATCH_SIZE': 16,
@@ -17,46 +22,34 @@ HYPERPARAMETERS = {
     'LEARNING_RATE': 0.001,
 }
 
-DATASET_PATH = './data/dataset.csv'
-
-MODEL_PATH = './model/'
-
 ARTIFACTS = {
-    'model': 'model/model.h5',
-    'preprocessor': 'model/tokenizer.pkl' 
+    'model': '{}/model.h5'.format(MODEL_PATH),
+    'preprocessor': '{}/tokenizer.pkl'.format(MODEL_PATH) 
 }
-
-THRESHOLD = 0.5
 
 class ModelWrapper(mlflow.pyfunc.PythonModel):
 
     def load_context(self, context):
-        model = tf.keras.models.load_model(
-            context.artifacts["model"]
-            )
-        preprocessor = pickle.load(
-            open(context.artifacts["preprocessor"],'rb')
-            )
+        model = tf.keras.models.load_model(context.artifacts["model"])
+        preprocessor = pickle.load(open(context.artifacts["preprocessor"],'rb'))
         self.model = model
         self.preprocessor = preprocessor
 
     def predict(self, context, model_input):
         texts = model_input['text'].tolist()
-        X = self.preprocessor.texts_to_matrix(
-            texts, mode='tfidf'
-            )
+        X = self.preprocessor.texts_to_matrix(texts, mode='tfidf')
         p = self.model.predict(X)
         p = [1 if x[0] > THRESHOLD else 0 for x in p]
         return p
 
 
-def train(dataset_path=None, hyperparameters=None, model_path=None):
+def train():
     """Trains a model given a dataset"""
-    NUM_WORDS = hyperparameters['NUM_WORDS']
-    BATCH_SIZE = hyperparameters['BATCH_SIZE']
-    EPOCHS = hyperparameters['EPOCHS']
+    NUM_WORDS = HYPERPARAMETERS['NUM_WORDS']
+    BATCH_SIZE = HYPERPARAMETERS['BATCH_SIZE']
+    EPOCHS = HYPERPARAMETERS['EPOCHS']
 
-    dataset = pd.read_csv(dataset_path, sep='\t')
+    dataset = pd.read_csv(DATASET_PATH, sep='\t')
     texts = dataset["text"].tolist()
     labels = dataset["label"].tolist()
 
@@ -79,8 +72,8 @@ def train(dataset_path=None, hyperparameters=None, model_path=None):
     evaluation = model.evaluate(X, y)
     metrics = {'loss': float(evaluation[0]), 'accuracy': float(evaluation[1])}
     
-    nn_path = MODEL_PATH + ARTIFACTS['model']
-    preprocessor_path = MODEL_PATH + ARTIFACTS['preprocessor']
+    nn_path = ARTIFACTS['model']
+    preprocessor_path = ARTIFACTS['preprocessor']
     model.save(nn_path)
     pickle.dump(tokenizer, open(preprocessor_path,'wb+'), protocol=pickle.HIGHEST_PROTOCOL)
     return metrics
@@ -90,19 +83,11 @@ if __name__ == "__main__":
         for key, value in HYPERPARAMETERS.items():
             mlflow.log_param(key, value)
 
-        metrics = train(
-            dataset_path=DATASET_PATH,
-            hyperparameters=HYPERPARAMETERS,
-            model_path=MODEL_PATH
-        )
+        metrics = train()
 
         for key, value in metrics.items():
             mlflow.log_metric(key, value)
 
-        #mlflow.log_artifacts(MODEL_PATH)
         mlflow.pyfunc.log_model(
-            'model',
-            python_model=ModelWrapper(),
-            artifacts=ARTIFACTS,
-            conda_env='./conda.yaml'
+            'model', python_model=ModelWrapper(), artifacts=ARTIFACTS, conda_env=CONDA_ENV_PATH
             )
