@@ -2,7 +2,6 @@ import pickle
 import mlflow
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 from tensorflow.keras.preprocessing import text
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation, Dropout
@@ -30,6 +29,7 @@ ARTIFACTS = {
 class ModelWrapper(mlflow.pyfunc.PythonModel):
 
     def load_context(self, context):
+        import tensorflow as tf
         model = tf.keras.models.load_model(context.artifacts["model"])
         preprocessor = pickle.load(open(context.artifacts["preprocessor"],'rb'))
         self.model = model
