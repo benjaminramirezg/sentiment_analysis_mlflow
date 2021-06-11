@@ -5,7 +5,10 @@ dependencies:
   - python=3.7
   - pip
   - pip:
+    - mysqlclient
     - tensorflow
     - numpy
     - pandas
-    - mlflow>=1.0
+    - mlflow
+    - onesaitplatform-client-services
+    - mlflow-onesaitplatform-plugin==0.2.9

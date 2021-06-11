@@ -11,6 +11,7 @@ from mlflow import log_metric, log_param, log_artifacts
 CONDA_ENV_PATH = './conda.yaml'
 DATASET_PATH = './data/dataset.csv'
 MODEL_PATH = 'model'
+LOCAL_PATH = './model/'
 THRESHOLD = 0.5
 
 HYPERPARAMETERS = {
@@ -19,11 +20,6 @@ HYPERPARAMETERS = {
     'EPOCHS': 2,
     'DROPOUT': 0.2,
     'LEARNING_RATE': 0.001,
-}
-
-ARTIFACTS = {
-    'model': '{}/model.h5'.format(MODEL_PATH),
-    'preprocessor': '{}/tokenizer.pkl'.format(MODEL_PATH) 
 }
 
 class ModelWrapper(mlflow.pyfunc.PythonModel):
@@ -71,9 +67,9 @@ def train():
        
     evaluation = model.evaluate(X, y)
     metrics = {'loss': float(evaluation[0]), 'accuracy': float(evaluation[1])}
-    
-    nn_path = ARTIFACTS['model']
-    preprocessor_path = ARTIFACTS['preprocessor']
+
+    nn_path = '{}/model.h5'.format(LOCAL_PATH)
+    preprocessor_path = '{}/tokenizer.pkl'.format(LOCAL_PATH)
     model.save(nn_path)
     pickle.dump(tokenizer, open(preprocessor_path,'wb+'), protocol=pickle.HIGHEST_PROTOCOL)
     return metrics
@@ -88,6 +84,7 @@ if __name__ == "__main__":
         for key, value in metrics.items():
             mlflow.log_metric(key, value)
 
+        print('Ahora va...')
         mlflow.pyfunc.log_model(
-            'model', python_model=ModelWrapper(), artifacts=ARTIFACTS, conda_env=CONDA_ENV_PATH
+            MODEL_PATH, loader_module='mlflow.pyfunc.PythonModel', data_path=LOCAL_PATH, conda_env=CONDA_ENV_PATH
             )
